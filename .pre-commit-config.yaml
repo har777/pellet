@@ -1,0 +1,31 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.1.0
+    hooks:
+    - id: trailing-whitespace
+    - id: check-case-conflict
+    - id: end-of-file-fixer
+    - id: check-yaml
+    - id: check-added-large-files
+    - id: detect-private-key
+
+- repo: https://github.com/myint/autoflake
+  rev: v1.4
+  hooks:
+    - id: autoflake
+      args: [--in-place, --remove-all-unused-import]
+
+- repo: https://github.com/pycqa/isort
+  rev: 5.10.1
+  hooks:
+    - id: isort
+      name: isort (python)
+    - id: isort
+      name: isort (pyi)
+      types: [pyi]
+
+- repo: https://github.com/ambv/black
+  rev: 22.3.0
+  hooks:
+    - id: black
+      args: [--line-length=88, --safe]
