@@ -86,11 +86,11 @@ PELLET = {
 ## Callback function
 
 The callback function should accept three arguments:
-1. request -> django request object
-2. response -> django response object
-3. pellet_metrics -> dict containing metrics collected by pellet
+1. `request` -> django request object
+2. `response` -> django response object
+3. `pellet_metrics` -> dict containing metrics collected by pellet
 
-Example functionality: 
+Example functionality:
 1. collect and send api call level pellet metrics to an external service like datadog
 2. make integration tests fail for an api if too many queries are happening by raising an exception
 3. send alert emails, slack messages, etc on too many queries
