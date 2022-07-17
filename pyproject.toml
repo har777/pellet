@@ -1,10 +1,15 @@
 [tool.poetry]
 name = "pellet"
 version = "0.1.0"
-description = ""
+description = "Pellet helps improve your Django app performance by discovering N+1 queries"
 authors = ["Harikrishnan Shaji <hihari777@gmail.com>"]
 readme = "README.md"
 license = "BSD-3-Clause"
+homepage = "https://github.com/har777/pellet"
+repository = "https://github.com/har777/pellet"
+documentation = "https://github.com/har777/pellet"
+
+keywords = ["django", "python", "performance", "database", "N+1"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
