@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pellet"
-version = "0.1.0"
+version = "0.1.1"
 description = "Pellet helps improve your Django app performance by discovering N+1 queries"
 authors = ["Harikrishnan Shaji <hihari777@gmail.com>"]
 readme = "README.md"

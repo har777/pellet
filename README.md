@@ -28,7 +28,7 @@ PELLET = {
 
     # Enable this if you want count and time
     # metrics at a query level
-    "query_level_metrics_enabled": False
+    "query_level_metrics_enabled": False,
 
     # Settings related to response headers
     # set by pellet
