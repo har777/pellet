@@ -12,7 +12,7 @@ Pellet ultimately aims to recreate [Bullet](https://github.com/flyerhzm/bullet) 
 
 ## Enabling Pellet
 
-1. Add `pellet.pellet.PelletMiddleware` to your django middleware list.
+1. Add `pellet.middleware.PelletMiddleware` to your django middleware list.
 2. Configure pellet behaviour by using the `PELLET` variable in your django settings file.
 
 ## Configuring Pellet
@@ -54,6 +54,8 @@ PELLET = {
 
             // Min number of times a query should happen
             // for it to be classified as N+1
+            // Queries with less count than this will
+            // not show up in the debug table
             "min": 2,
 
             // Max number of times a query should happen
