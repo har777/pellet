@@ -73,13 +73,13 @@ PELLET = {
             # Every query happening more times than this
             # is classified as a high impact performance issue
             "medium": 10
-        },
+        }
+    },
 
-        # Path to a callback function which will be called
-        # with the request, response and
-        # pellet metrics object
-        "callback": None
-    }
+    # Path to a callback function which will be called
+    # with the request, response and
+    # pellet metrics object
+    "callback": None
 }
 ```
 
