@@ -1,6 +1,6 @@
 import logging
 import time
-from uuid import UUID
+from importlib import import_module
 
 from django.conf import settings
 from django.db import connection
@@ -9,37 +9,6 @@ from rich import print as rich_print
 from rich.table import Table
 
 logger = logging.getLogger(__name__)
-
-
-def is_uuid(string: str) -> bool:
-    """
-    Given a string, returns if it is a valid UUID
-    :param string: String to check if is a valid UUID
-    :return: True if string is a valid UUID else False
-    """
-    try:
-        UUID(string)
-        return True
-    except ValueError:
-        return False
-
-
-def get_sanitised_path(path: str) -> str:
-    """
-    Given a path, returns it with all the path params(integers or UUIDs) replaced with "_id_"
-    :param path: String which represents a path sent to Django; it is expected to be request.path
-    :return: Path string with all path params(integers or UUIDs) replaced with "_id_"
-    """
-    # Adding a trailing slash if it doesn't exist
-    if path == "" or path[-1] != "/":
-        path += "/"
-
-    return "/".join(
-        [
-            "_id_" if segment.isnumeric() or is_uuid(segment) else segment
-            for segment in path.split("/")
-        ]
-    )
 
 
 class PelletMetrics:
@@ -58,10 +27,11 @@ class PelletMetrics:
         elapsed_time = time.monotonic() - start
         self.elapsed_time += elapsed_time
 
-        if sql not in self.query_stats:
-            self.query_stats[sql] = {"count": 0, "elapsed_time": 0}
-        self.query_stats[sql]["count"] += 1
-        self.query_stats[sql]["elapsed_time"] += elapsed_time
+        if getattr(settings, "PELLET", {}).get("query_level_metrics_enabled", False):
+            if sql not in self.query_stats:
+                self.query_stats[sql] = {"count": 0, "elapsed_time": 0}
+            self.query_stats[sql]["count"] += 1
+            self.query_stats[sql]["elapsed_time"] += elapsed_time
 
         return result
 
@@ -112,20 +82,29 @@ class PelletMiddleware:
                 .get("query_time_header", "X-Pellet-Time")
             ] = elapsed_time
 
-        if getattr(settings, "PELLET", {}).get("debug", {}).get("enabled", False):
-            method = request.method
-            path = None
+        if getattr(settings, "PELLET", {}).get("callback", None):
+            callback_path = getattr(settings, "PELLET", {}).get("callback")
             try:
-                path = get_sanitised_path(path=request.path)
-            except Exception:
-                logger.exception("Error getting sanitised path")
+                callback_path_split = callback_path.split(".")
+                module_name = ".".join(callback_path_split[:-1])
+                func_name = callback_path_split[-1]
+                callback_func = getattr(import_module(module_name), func_name)
+                callback_func(
+                    request=request,
+                    response=response,
+                    pellet_metrics=pellet_metrics.__dict__,
+                )
+            except (AttributeError, IndexError):
+                logger.exception(
+                    "Pellet callback: {callback_name} failed".format(
+                        callback_name=callback_path
+                    )
+                )
 
-            if not path:
-                return response
-
+        if getattr(settings, "PELLET", {}).get("debug", {}).get("enabled", False):
             pellet_title = "{color_prefix}{method} {path} : {count} {query_word} in {elapsed_time}s".format(
                 color_prefix=self.get_color_prefix(count=count),
-                method=method,
+                method=request.method,
                 path=request.get_full_path(),
                 count=count,
                 query_word=("query" if count == 1 else "queries"),
@@ -175,8 +154,17 @@ class PelletMiddleware:
                         ),
                     )
 
+            # If query level metrics was disabled
+            if not getattr(settings, "PELLET", {}).get(
+                "query_level_metrics_enabled", False
+            ):
+                pellet_table.add_row(
+                    "[bold green]Query level metrics disabled",
+                    "",
+                    "",
+                )
             # If no N+1 found
-            if pellet_table.row_count == 0:
+            elif pellet_table.row_count == 0:
                 pellet_table.add_row(
                     "[bold green]No N+1 queries detected",
                     "",

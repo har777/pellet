@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from pellet.middleware import get_sanitised_path, is_uuid
+from pellet.utils import get_sanitised_path, is_uuid
 
 
 def test_is_uuid():
