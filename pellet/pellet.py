@@ -71,17 +71,21 @@ class PelletMiddleware:
         self.get_response = get_response
 
     @staticmethod
-    def get_color_string(count: int):
-        if count <= 10:
+    def get_color_prefix(count: int):
+        if count <= getattr(settings, "PELLET", {}).get("debug", {}).get(
+            "count_threshold"
+        ).get("ok", 5):
             return "[bold green]"
-        elif count <= 50:
+        elif count <= getattr(settings, "PELLET", {}).get("debug", {}).get(
+            "count_threshold"
+        ).get("warning", 10):
             return "[bold yellow]"
         else:
             return "[bold red]"
 
     def __call__(self, request):
         # Skip pellet if disabled
-        if not settings.PELLET_ENABLED:
+        if not getattr(settings, "PELLET", {}).get("enabled", False):
             return self.get_response(request)
 
         pellet_metrics = PelletMetrics()
@@ -96,11 +100,19 @@ class PelletMiddleware:
         elapsed_time = float(format(pellet_metrics.elapsed_time, ".3f"))
 
         # Add pellet metrics to the response header if enabled
-        if settings.PELLET_HEADERS_ENABLED:
-            response["X-Pellet-Count"] = count
-            response["X-Pellet-Time"] = elapsed_time
+        if getattr(settings, "PELLET", {}).get("headers", {}).get("enabled", False):
+            response[
+                getattr(settings, "PELLET", {})
+                .get("headers", {})
+                .get("query_count_header", "X-Pellet-Count")
+            ] = count
+            response[
+                getattr(settings, "PELLET", {})
+                .get("headers", {})
+                .get("query_time_header", "X-Pellet-Time")
+            ] = elapsed_time
 
-        if settings.PELLET_DEBUG_ENABLED:
+        if getattr(settings, "PELLET", {}).get("debug", {}).get("enabled", False):
             method = request.method
             path = None
             try:
@@ -111,9 +123,12 @@ class PelletMiddleware:
             if not path:
                 return response
 
-            pellet_title = (
-                f"{self.get_color_string(count=count)}{method} "
-                f"{request.get_full_path()} : {count} queries in {elapsed_time}s"
+            pellet_title = "{color_prefix}{method} {path} : {count} queries in {elapsed_time}s".format(
+                color_prefix=self.get_color_prefix(count=count),
+                method=method,
+                path=request.get_full_path(),
+                count=count,
+                elapsed_time=elapsed_time,
             )
 
             pellet_table = Table(
@@ -122,7 +137,7 @@ class PelletMiddleware:
                 header_style="bold white",
                 show_lines=True,
                 box=box.ASCII_DOUBLE_HEAD,
-                min_width=100
+                min_width=100,
             )
 
             pellet_table.add_column("N+1 Query")
@@ -142,12 +157,21 @@ class PelletMiddleware:
 
             for query, stats in query_stats.items():
                 # N+1 query
-                if stats["count"] > 1:
-                    color_string = self.get_color_string(count=stats["count"])
+                if stats["count"] >= getattr(settings, "PELLET", {}).get(
+                    "debug", {}
+                ).get("count_threshold", {}).get("min", 2):
+                    color_prefix = self.get_color_prefix(count=stats["count"])
                     pellet_table.add_row(
-                        f"{color_string}{query}",
-                        f"{color_string}{stats['count']}",
-                        f"{color_string}{format(stats['elapsed_time'], '.3f')}",
+                        "{color_prefix}{query}".format(
+                            color_prefix=color_prefix, query=query
+                        ),
+                        "{color_prefix}{count}".format(
+                            color_prefix=color_prefix, count=stats["count"]
+                        ),
+                        "{color_prefix}{elapsed_time}".format(
+                            color_prefix=color_prefix,
+                            elapsed_time=format(stats["elapsed_time"], ".3f"),
+                        ),
                     )
 
             # If no N+1 found
