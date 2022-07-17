@@ -123,11 +123,12 @@ class PelletMiddleware:
             if not path:
                 return response
 
-            pellet_title = "{color_prefix}{method} {path} : {count} queries in {elapsed_time}s".format(
+            pellet_title = "{color_prefix}{method} {path} : {count} {query_word} in {elapsed_time}s".format(
                 color_prefix=self.get_color_prefix(count=count),
                 method=method,
                 path=request.get_full_path(),
                 count=count,
+                query_word=("query" if count == 1 else "queries"),
                 elapsed_time=elapsed_time,
             )
 
