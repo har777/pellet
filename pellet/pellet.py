@@ -74,11 +74,11 @@ class PelletMiddleware:
     def get_color_prefix(count: int):
         if count <= getattr(settings, "PELLET", {}).get("debug", {}).get(
             "count_threshold"
-        ).get("ok", 5):
+        ).get("low", 5):
             return "[bold green]"
         elif count <= getattr(settings, "PELLET", {}).get("debug", {}).get(
             "count_threshold"
-        ).get("warning", 10):
+        ).get("medium", 10):
             return "[bold yellow]"
         else:
             return "[bold red]"
