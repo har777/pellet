@@ -6,7 +6,7 @@ authors = ["Harikrishnan Shaji <hihari777@gmail.com>"]
 license = "BSD-3-Clause"
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.8.9"
 rich = "12.5.1"
 
 [tool.poetry.dev-dependencies]

@@ -1,4 +1,14 @@
+import logging
+import time
 from uuid import UUID
+
+from django.conf import settings
+from django.db import connection
+from rich import box
+from rich import print as rich_print
+from rich.table import Table
+
+logger = logging.getLogger(__name__)
 
 
 def is_uuid(string: str) -> bool:
@@ -30,3 +40,123 @@ def get_sanitised_path(path: str) -> str:
             for segment in path.split("/")
         ]
     )
+
+
+class PelletMetrics:
+    def __init__(self):
+        # count of number of queries run
+        self.count = 0
+        # total time taken to run those queries
+        self.elapsed_time = 0
+        # stats per query
+        self.query_stats = {}
+
+    def __call__(self, execute, sql, params, many, context):
+        self.count += 1
+        start = time.monotonic()
+        result = execute(sql, params, many, context)
+        elapsed_time = time.monotonic() - start
+        self.elapsed_time += elapsed_time
+
+        if sql not in self.query_stats:
+            self.query_stats[sql] = {"count": 0, "elapsed_time": 0}
+        self.query_stats[sql]["count"] += 1
+        self.query_stats[sql]["elapsed_time"] += elapsed_time
+
+        return result
+
+
+class PelletMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    @staticmethod
+    def get_color_string(count: int):
+        if count <= 10:
+            return "[bold green]"
+        elif count <= 50:
+            return "[bold yellow]"
+        else:
+            return "[bold red]"
+
+    def __call__(self, request):
+        # Skip pellet if disabled
+        if not settings.PELLET_ENABLED:
+            return self.get_response(request)
+
+        pellet_metrics = PelletMetrics()
+        with connection.execute_wrapper(pellet_metrics):
+            response = self.get_response(request)
+
+        # Skip pellet metrics processing if path doesn't resolve
+        if not request.resolver_match:
+            return response
+
+        count = pellet_metrics.count
+        elapsed_time = float(format(pellet_metrics.elapsed_time, ".3f"))
+
+        # Add pellet metrics to the response header if enabled
+        if settings.PELLET_HEADERS_ENABLED:
+            response["X-Pellet-Count"] = count
+            response["X-Pellet-Time"] = elapsed_time
+
+        if settings.PELLET_DEBUG_ENABLED:
+            method = request.method
+            path = None
+            try:
+                path = get_sanitised_path(path=request.path)
+            except Exception:
+                logger.exception("Error getting sanitised path")
+
+            if not path:
+                return response
+
+            pellet_title = (
+                f"{self.get_color_string(count=count)}{method} "
+                f"{request.get_full_path()} : {count} queries in {elapsed_time}s"
+            )
+
+            pellet_table = Table(
+                title=pellet_title,
+                show_header=True,
+                header_style="bold white",
+                show_lines=True,
+                box=box.ASCII_DOUBLE_HEAD,
+            )
+
+            pellet_table.add_column("N+1 Query")
+            pellet_table.add_column("Count", justify="right")
+            pellet_table.add_column("Time(sec)", justify="right")
+
+            query_stats = pellet_metrics.query_stats
+
+            # Sort by decreasing value of count and elapsed_time
+            query_stats = dict(
+                sorted(
+                    query_stats.items(),
+                    key=lambda item: (item[1]["count"], item[1]["elapsed_time"]),
+                    reverse=True,
+                )
+            )
+
+            for query, stats in query_stats.items():
+                # N+1 query
+                if stats["count"] > 1:
+                    color_string = self.get_color_string(count=stats["count"])
+                    pellet_table.add_row(
+                        f"{color_string}{query}",
+                        f"{color_string}{stats['count']}",
+                        f"{color_string}{format(stats['elapsed_time'], '.3f')}",
+                    )
+
+            # If no N+1 found
+            if pellet_table.row_count == 0:
+                pellet_table.add_row(
+                    "[bold green]No N+1 queries detected",
+                    "",
+                    "",
+                )
+
+            rich_print(pellet_table)
+
+        return response
