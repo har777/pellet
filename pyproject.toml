@@ -7,7 +7,7 @@ readme = "README.md"
 license = "BSD-3-Clause"
 
 [tool.poetry.dependencies]
-python = "^3.4.4"
+python = "^3.6"
 rich = "12.5.1"
 
 [tool.poetry.dev-dependencies]
