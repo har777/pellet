@@ -122,6 +122,7 @@ class PelletMiddleware:
                 header_style="bold white",
                 show_lines=True,
                 box=box.ASCII_DOUBLE_HEAD,
+                min_width=100
             )
 
             pellet_table.add_column("N+1 Query")
