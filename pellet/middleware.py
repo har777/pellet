@@ -94,7 +94,7 @@ class PelletMiddleware:
                     response=response,
                     pellet_metrics=pellet_metrics.__dict__,
                 )
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError, ModuleNotFoundError):
                 logger.exception(
                     "Pellet callback: {callback_name} failed".format(
                         callback_name=callback_path
