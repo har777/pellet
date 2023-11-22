@@ -6,6 +6,8 @@ The Django ORM makes it easy to forget using `select_related` and `prefetch_rela
 
 Pellet ultimately aims to recreate [Bullet](https://github.com/flyerhzm/bullet) for Django.
 
+![usage terminal screenshot](usage-screenshot.png "usage terminal screenshot")
+
 ## Installing Pellet
 
 `pip install pellet`
