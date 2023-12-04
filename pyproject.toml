@@ -13,7 +13,7 @@ keywords = ["django", "python", "performance", "database", "N+1"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-rich = "12.5.1"
+rich = ">=12.5.1"
 
 [tool.poetry.dev-dependencies]
 Django = "4.0.6"
